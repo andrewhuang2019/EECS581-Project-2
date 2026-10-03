@@ -225,6 +225,7 @@ std::vector<TileChange> GameWindow::reveal_tile(int row, int col) {
   }
 
   if (hit_bomb) {
+    audio_manager.play_sound("./include/mine_explosion.wav");
     m_game_state = GameState::Lost;
   } else {
     bool all_safe_tiles_uncovered = true;

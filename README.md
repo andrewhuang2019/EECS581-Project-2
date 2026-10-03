@@ -3,22 +3,26 @@
 
 ### Linux
 
-Install the build tools and gtkmm 4:
+Install the build tools, gtkmm 4, and audio tools:
 
 **Ubuntu / Debian** (Ubuntu 22.04+ / Debian 12+)
 ```bash
 sudo apt update
 sudo apt install build-essential pkg-config libgtkmm-4.0-dev
+sudo apt install libpulse0 pulseaudio-utils
 ```
 
 **Fedora**
 ```bash
 sudo dnf install gcc-c++ make pkgconf-pkg-config gtkmm4.0-devel
+sudo dnf install pulseaudio-libs pulseaudio-utils
 ```
 
 **Arch**
 ```bash
 sudo pacman -S base-devel gtkmm-4.0
+sudo pacman -S libpulse
+sudo pacman -S pipewire pipewire-pulse
 ```
 
 Then build and run:

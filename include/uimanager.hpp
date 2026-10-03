@@ -4,6 +4,7 @@
 #include <gtkmm.h>
 #include "board.hpp"
 #include "input_handler.hpp"
+#include "audio_engine.hpp"
 
 class UIWindow : public Gtk::Window{
     public:
@@ -66,6 +67,7 @@ class GameWindow : public UIWindow {
     enum class GameState { NotStarted, Playing, Won, Lost };
 
     Board m_board;
+    AudioManager audio_manager{};
     GameState m_game_state = GameState::NotStarted;
     int m_bomb_count = 20;
     int m_flag_count = 0;
