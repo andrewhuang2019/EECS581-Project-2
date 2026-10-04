@@ -13,10 +13,6 @@ constexpr bool in_3_by_3_range(uint8_t x, uint8_t y, uint8_t new_x, uint8_t new_
 	return (below && above) && (left && right);
 }
 
-Board::Board(AudioManager& manager){
-	audio_manager = &manager;
-}
-
 // Board::generate_tile_values
 // Used by Board::Iniitialize
 // Adds the +1 to all surrounding non-bomb tiles
@@ -122,12 +118,9 @@ bool Board::uncover(uint8_t x, uint8_t y) {
 	if (!is_bomb(x, y)) {
 		if (is_empty(x, y))
 			uncover_surrounding(x, y);
-
-    	audio_manager->play_sound("./include/blop.wav");
 		return false;
 	}
 
-    audio_manager->play_sound("./include/mine_explosion.wav");
 	return true;
 }
 

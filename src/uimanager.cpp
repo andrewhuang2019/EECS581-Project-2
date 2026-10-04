@@ -63,7 +63,7 @@ void StartWindow::on_start_button_clicked() {
   }
 }
 
-GameWindow::GameWindow() : m_board(m_audio) {
+GameWindow::GameWindow() {
   m_main_box.append(m_game_info);
   m_input_handler.on_start_game = [this](int num_bombs) { start_game(num_bombs); };
   m_input_handler.on_retry = [this]() { reset_game(); };
@@ -139,7 +139,7 @@ void GameWindow::start_game(int bomb_count) {
     m_buttons[i].set_sensitive(true);
   }
 
-  m_board.reset();
+  m_board = Board{};
   auto txt = Glib::ustring::compose("Flags Placed: %1 | (Bombs/Flags) left: %2", m_flag_count, m_bomb_count - m_flag_count);
 	m_game_info.set_text(txt);
 }
@@ -170,6 +170,7 @@ void GameWindow::update_button_display(int row, int col) {
   button.set_sensitive(false);
 
   if (m_board.is_bomb(col, row)) {
+    m_audio.play_bomb();
     button.set_label("💣");
     return;
   }
@@ -180,6 +181,7 @@ void GameWindow::update_button_display(int row, int col) {
     return;
   }
 
+  m_audio.play_click();
   button.set_label(std::to_string(value));
 }
 

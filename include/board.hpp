@@ -22,7 +22,7 @@ class Board {
 
 	public:
 		// Board Constructor
-		Board(AudioManager& manager);
+		Board() {};
 		void initialize(std::uint8_t bomb_count, std::uint8_t x, std::uint8_t y);
 
 		bool is_bomb(std::uint8_t x, std::uint8_t y);
