@@ -63,7 +63,7 @@ void StartWindow::on_start_button_clicked() {
   }
 }
 
-GameWindow::GameWindow(){
+GameWindow::GameWindow() : m_board(m_audio) {
   m_main_box.append(m_game_info);
   m_input_handler.on_start_game = [this](int num_bombs) { start_game(num_bombs); };
   m_input_handler.on_retry = [this]() { reset_game(); };
@@ -138,8 +138,9 @@ void GameWindow::start_game(int bomb_count) {
     m_buttons[i].set_label("");
     m_buttons[i].set_sensitive(true);
   }
-  m_board = Board{};
-	auto txt = Glib::ustring::compose("Flags Placed: %1 | (Bombs/Flags) left: %2", m_flag_count, m_bomb_count - m_flag_count);
+
+  m_board.reset();
+  auto txt = Glib::ustring::compose("Flags Placed: %1 | (Bombs/Flags) left: %2", m_flag_count, m_bomb_count - m_flag_count);
 	m_game_info.set_text(txt);
 }
 
@@ -225,7 +226,6 @@ std::vector<TileChange> GameWindow::reveal_tile(int row, int col) {
   }
 
   if (hit_bomb) {
-    audio_manager.play_sound("./include/mine_explosion.wav");
     m_game_state = GameState::Lost;
   } else {
     bool all_safe_tiles_uncovered = true;

@@ -1,5 +1,6 @@
 // for std::uint8_t
 #include <cstdint>
+#include "audio_engine.hpp"
 constexpr std::uint8_t GRID_SIZE = 10;
 
 class Tile {
@@ -17,10 +18,11 @@ class Board {
 		void update_tile_values(std::uint8_t x, std::uint8_t y);
 		void uncover_surrounding(std::uint8_t x, std::uint8_t y);
 		bool is_empty(std::uint8_t x, std::uint8_t y);
+    	AudioManager* audio_manager;
 
 	public:
 		// Board Constructor
-		Board() {};
+		Board(AudioManager& manager);
 		void initialize(std::uint8_t bomb_count, std::uint8_t x, std::uint8_t y);
 
 		bool is_bomb(std::uint8_t x, std::uint8_t y);
@@ -31,6 +33,8 @@ class Board {
 		
 		// return true if a bomb was uncovered
 		bool uncover(std::uint8_t x, std::uint8_t y);
+
+		void reset();
 
 		//Not sure if neccessary but might need to free Board.tiles 
 		~Board() {};

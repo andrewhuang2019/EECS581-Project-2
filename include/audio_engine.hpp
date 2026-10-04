@@ -1,3 +1,5 @@
+#ifndef AUDIO_ENGINE_HPP
+#define AUDIO_ENGINE_HPP
 #ifdef AUDIO_ENGINE_IMPL
 #define MINIAUDIO_IMPLEMENTATION
 #endif
@@ -15,3 +17,4 @@ class AudioManager {
         ma_engine engine;
 
 };
+#endif

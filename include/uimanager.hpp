@@ -66,8 +66,8 @@ class GameWindow : public UIWindow {
     //Board state
     enum class GameState { NotStarted, Playing, Won, Lost };
 
+    AudioManager m_audio;
     Board m_board;
-    AudioManager audio_manager{};
     GameState m_game_state = GameState::NotStarted;
     int m_bomb_count = 20;
     int m_flag_count = 0;
