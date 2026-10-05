@@ -80,6 +80,10 @@ class GameWindow : public UIWindow {
     void on_button_right_clicked(int id);
     void on_play_again_clicked();
     void on_quit_clicked();
+
+    //AI rules medium
+    bool try_medium_rule();
+    void ai_medium_turn();
 };
 
 #endif // UIMANAGER_H
