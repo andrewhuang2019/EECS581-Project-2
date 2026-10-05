@@ -344,3 +344,109 @@ void GameWindow::on_quit_clicked(){
     m_input_handler.on_close();
   }
 }
+
+bool GameWindow::try_medium_rule(){
+  if (m_game_state != GameState::Playing){
+    return false;
+  }
+
+  for (int row=0; row < GRID_SIZE; row++){
+    for (int col=0; col < GRID_SIZE; col++){
+      if (m_board.get_state(col, row) != Tile::Uncovered){
+        continue;
+      }
+
+      const int number = m_board.get_tile_value(col, row);
+      if (number == 0 || number == 9) {
+        continue;
+      }
+
+      int flagged_count = 0;
+      std::vector<std::pair<int, int>> hidden_neighbors;
+
+      for (int i=-1; i <= 1; i++){
+        for (int j=-1; j <= 1; j++){
+          if (i == 0 && j == 0){
+            continue;
+          }
+
+          const int neighbor_row = row + i;
+          const int neighbor_col = col + j;
+
+          if (neighbor_row < 0 || neighbor_row >= GRID_SIZE || neighbor_col < 0 || neighbor_col >= GRID_SIZE){
+            continue;
+          }
+
+          const auto state = m_board.get_state(neighbor_col, neighbor_row);
+
+          if (state == Tile::Flagged){
+            flagged_count++;
+          } else if (state == Tile::Covered){
+            hidden_neighbors.push_back({neighbor_row, neighbor_col});
+          }
+        }
+      }
+
+      if (hidden_neighbors.empty()){
+        continue;
+      }
+
+      const int hidden_count = static_cast<int>(hidden_neighbors.size());
+
+      //rule 1 - number of hidden neighbors of a revealed cell equals that cell’s number (all hidden neighbors are mines)
+      const bool should_flag = hidden_count == (number - flagged_count);
+
+      //rule 2 - number of flagged neighbors of a revealed cell equals that cell’s number (all hidden neighbors are safe)
+      const bool should_reveal = flagged_count == number;
+
+      if (!should_flag && !should_reveal){
+        continue;
+      }
+
+      bool acted = false;
+
+      for (const auto& neighbor : hidden_neighbors){
+        const int neighbor_row = neighbor.first;
+        const int neighbor_col = neighbor.second;
+
+        if (m_board.get_state(neighbor_col, neighbor_row) != Tile::Covered){
+          continue;
+        }
+
+        //flag or reveal according to rule
+        const auto changes = should_flag ? flag_tile(neighbor_row, neighbor_col) : reveal_tile(neighbor_row, neighbor_col);
+
+        if (!changes.empty()){
+          acted = true;
+        }
+
+        for (const auto& change : changes){
+          update_button_display(change.row, change.col);
+        }
+
+        if (m_game_state == GameState::Won || m_game_state == GameState::Lost){
+          show_end_screen(m_game_state == GameState::Won);
+          return acted;
+        }
+      }
+
+      //if medium AI rule was found and followed, end function and report the finding
+      if (acted){
+        return true;
+      }
+    }
+  }
+  return false; //returns if neither rule is able to be applied
+}
+
+void GameWindow::ai_medium_turn(){
+  if (m_game_state == GameState::Won || m_game_state == GameState::Lost){
+    return;
+  }
+
+  //if a medium rule was not performed by the AI
+  if (!try_medium_rule()){
+    // IMPLEMENT: call the easy AI function
+    //ai_easy_turn();
+  }
+}
