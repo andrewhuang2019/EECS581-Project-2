@@ -479,6 +479,7 @@ bool GameWindow::try_easy_rule() {
   while (!valid_tile_found) {
     target_x = rand() % GRID_SIZE; 
     target_y = rand() % GRID_SIZE; 
+    std::cout << target_x << "/n" << target_y;  
     if (m_board.get_state(target_x, target_y) == Tile::TileState::Covered) {
       bool hit_bomb = m_board.uncover(target_x, target_y); // Fixed capitalization
       valid_tile_found = true;
