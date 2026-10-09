@@ -84,6 +84,10 @@ class GameWindow : public UIWindow {
     //AI rules medium
     bool try_medium_rule();
     void ai_medium_turn();
+
+    //AI rules easy
+    bool try_easy_rule();
+    void ai_easy_turn();
 };
 
 #endif // UIMANAGER_H
