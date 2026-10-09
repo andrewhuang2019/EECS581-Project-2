@@ -499,6 +499,6 @@ void GameWindow::ai_easy_turn(){
   
   if (!try_easy_rule()){
     std::cerr << "FAILED TO TAKE AI EASY TURN\n";  
-    return
+    return;
   }
 }
