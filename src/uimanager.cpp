@@ -1,4 +1,5 @@
 #include "uimanager.hpp"
+#include <iostream>
 
 using namespace std;
 
@@ -283,20 +284,21 @@ std::vector<TileChange> GameWindow::flag_tile(int row, int col) {
 
 void GameWindow::on_button_clicked(int id){
   /* Handler for left button clicks */
-  auto changes = m_input_handler.handle_tile_click(id, ClickType::LEFT);
-  for (const auto& change : changes) {
-    if (change.action == TileAction::Reveal ||
-        change.action == TileAction::RevealCascade ||
-        change.action == TileAction::MineHit) {
-      update_button_display(change.row, change.col);
-    }
-  }
+  // auto changes = m_input_handler.handle_tile_click(id, ClickType::LEFT);
+  // for (const auto& change : changes) {
+  //   if (change.action == TileAction::Reveal ||
+  //       change.action == TileAction::RevealCascade ||
+  //       change.action == TileAction::MineHit) {
+  //     update_button_display(change.row, change.col);
+  //   }
+  // }
 
-  if (m_game_state == GameState::Won) {
-    show_end_screen(true);
-  } else if (m_game_state == GameState::Lost) {
-    show_end_screen(false);
-  }
+  // if (m_game_state == GameState::Won) {
+  //   show_end_screen(true);
+  // } else if (m_game_state == GameState::Lost) {
+  //   show_end_screen(false);
+  // }
+  ai_easy_turn();
 }
 
 void GameWindow::on_button_right_clicked(int id){
@@ -447,6 +449,56 @@ void GameWindow::ai_medium_turn(){
   //if a medium rule was not performed by the AI
   if (!try_medium_rule()){
     // IMPLEMENT: call the easy AI function
-    //ai_easy_turn();
+    ai_easy_turn();
+  }
+}
+
+bool GameWindow::try_easy_rule() {
+  if (m_game_state != GameState::Playing) {
+    return false;
+  }
+
+  bool covered_tile_exists = false;
+  for (int r = 0; r < GRID_SIZE; ++r) {
+    for (int c = 0; c < GRID_SIZE; ++c) {
+      if (m_board.get_state(c, r) == Tile::TileState::Covered) {
+        covered_tile_exists = true;
+        break;
+      }
+    }
+  }
+
+  if (!covered_tile_exists) {
+    return false;
+  }
+
+  uint8_t target_x;
+  uint8_t target_y;
+  bool valid_tile_found = false;
+
+  while (!valid_tile_found) {
+    target_x = rand() % GRID_SIZE; 
+    target_y = rand() % GRID_SIZE; 
+    if (m_board.get_state(target_x, target_y) == Tile::TileState::Covered) {
+      bool hit_bomb = m_board.uncover(target_x, target_y); // Fixed capitalization
+      valid_tile_found = true;
+      if (hit_bomb) {
+        m_game_state = GameState::Lost;
+      }
+    }
+  }
+
+  update_all_displays();
+  return true;
+}
+
+void GameWindow::ai_easy_turn(){
+  if (m_game_state == GameState::Won || m_game_state == GameState::Lost){
+    return;
+  }
+  
+  if (!try_easy_rule()){
+    std::cerr << "FAILED TO TAKE AI EASY TURN\n";  
+    return
   }
 }
