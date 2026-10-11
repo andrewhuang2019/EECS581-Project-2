@@ -448,49 +448,38 @@ void GameWindow::ai_medium_turn(){
 
   //if a medium rule was not performed by the AI
   if (!try_medium_rule()){
-    // IMPLEMENT: call the easy AI function
     ai_easy_turn();
   }
 }
 
 bool GameWindow::try_easy_rule() {
-  if (m_game_state != GameState::Playing) {
+  if (m_game_state == GameState::Won || m_game_state == GameState::Lost) {
     return false;
   }
 
-  bool covered_tile_exists = false;
+  // collect covered (not flagged) tiles
+  std::vector<std::pair<int, int>> candidates;
   for (int r = 0; r < GRID_SIZE; ++r) {
     for (int c = 0; c < GRID_SIZE; ++c) {
-      if (m_board.get_state(c, r) == Tile::TileState::Covered) {
-        covered_tile_exists = true;
-        break;
+      if (m_game_state == GameState::NotStarted ||
+          m_board.get_state(c, r) == Tile::TileState::Covered) {
+        candidates.push_back({r, c});
       }
     }
   }
+  if (candidates.empty()) return false;
 
-  if (!covered_tile_exists) {
-    return false;
+  const auto [row, col] = candidates[rand() % candidates.size()];
+  const auto changes = reveal_tile(row, col);
+
+  for (const auto& change : changes) {
+    update_button_display(change.row, change.col);
   }
 
-  uint8_t target_x;
-  uint8_t target_y;
-  bool valid_tile_found = false;
-
-  while (!valid_tile_found) {
-    target_x = rand() % GRID_SIZE; 
-    target_y = rand() % GRID_SIZE; 
-    std::cout << target_x << "/n" << target_y;  
-    if (m_board.get_state(target_x, target_y) == Tile::TileState::Covered) {
-      bool hit_bomb = m_board.uncover(target_x, target_y); // Fixed capitalization
-      valid_tile_found = true;
-      if (hit_bomb) {
-        m_game_state = GameState::Lost;
-      }
-    }
+  if (m_game_state == GameState::Won || m_game_state == GameState::Lost) {
+    show_end_screen(m_game_state == GameState::Won);
   }
-
-  update_all_displays();
-  return true;
+  return !changes.empty();
 }
 
 void GameWindow::ai_easy_turn(){
