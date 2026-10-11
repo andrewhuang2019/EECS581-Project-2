@@ -1,4 +1,5 @@
 #include "uimanager.hpp"
+#include <cstdint>
 
 using namespace std;
 
@@ -349,6 +350,140 @@ void GameWindow::on_quit_clicked(){
   if (m_input_handler.on_close) {
     m_input_handler.on_close();
   }
+}
+
+
+/*
+ * hard rule application, just look for 1-2-1 patterns only and solve those
+ * this will not do anything if they are already solved, or there is none on the board
+ * a valid 1-2-1 state is as follows:
+ * (C -> convered, R -> revealed)
+ * C 1 R
+ * C 2 R
+ * C 1 R
+ * plus any rotation of this
+ *
+ * this is also meant to be ran after the medium rule has no more steps available
+*/
+bool GameWindow::try_hard_rule(){
+    if (m_game_state != GameState::Playing) {
+        return false;
+    }
+
+    // easy way to show what the tiles are
+    // C = 10,
+    // 1 = 1
+    // ...
+    // 8 = 8
+    // bomb = 9 (natively done already)
+    int custom_tiles[3][3];
+
+    // left up right down, representing where the uncovered tiles are
+    int matrices[4][3][3] = {
+        // left
+        {
+            {10, 1, -1},
+            {10, 2, -1},
+            {10, 1, -1}
+        },
+
+        // up
+        {
+            {10, 10, 10},
+            {1, 2, 1},
+            {-1, -1, -1}
+        },
+
+        // right
+        {
+            {-1, 1, 10},
+            {-1, 2, 10},
+            {-1, 1, 10}
+        },
+
+        // down
+        {
+            {-1, -1, -1},
+            {1, 2, 1},
+            {10, 10, 10}
+        }
+    };
+
+
+    // iterate through all 3x3 spaces on the board
+    for (size_t base_r = 0; base_r < GRID_SIZE - 2; base_r++) {
+        for (size_t base_c = 0; base_c < GRID_SIZE - 2; base_c++) {
+
+            // save information to custom_tiles
+            for (size_t r = base_r; r < base_r + 3; r++) {
+                for (size_t c = base_c; c < base_c + 3; c++) {
+                    if (m_board.get_state(c, r) == Tile::TileState::Covered ||
+                        m_board.get_state(c, r) == Tile::TileState::Flagged) {
+                        custom_tiles[r][c] = 10;
+                    }
+
+                    if (m_board.get_state(c, r) == Tile::TileState::Uncovered) {
+                        custom_tiles[r][c] = m_board.get_tile_value(c, r);
+                    }
+                }
+            }
+
+            // compare the custom tiles to left right up and down to see what to reveal/flag
+            for (size_t i = 0; i < 4; i++) {
+                // get matrix to check against from matrices
+                int (&compare)[3][3] = matrices[i];
+
+                bool matching = true;
+                for (size_t r = 0; r < 3; r++) {
+                    for (size_t c = 0; c < 3; c++) {
+                        if (compare[r][c] == -1){
+                            continue;
+                        }
+
+                        if (compare[r][c] != custom_tiles[r][c]) {
+                            matching = false;
+                        }
+                    }
+                }
+
+                if (matching) {
+                    // uncover middle tile, flag corners
+                    // find tiles based on i value
+                    switch (i) {
+                        case 0: // left
+                            flag_tile(base_c, base_r + 0);
+                            reveal_tile(base_c, base_r + 1);
+                            flag_tile(base_c, base_r + 2);
+                        break;
+
+                        case 1: // up
+                            flag_tile(base_c + 0, base_r);
+                            reveal_tile(base_c + 1, base_r);
+                            flag_tile(base_c + 2, base_r);
+                        break;
+
+                        case 2: // right
+                            flag_tile(base_c + 2, base_r + 0);
+                            reveal_tile(base_c + 2, base_r + 1);
+                            flag_tile(base_c + 2, base_r + 2);
+                        break;
+
+                        case 3: // down
+                            flag_tile(base_c + 0, base_r + 2);
+                            reveal_tile(base_c + 1, base_r + 2);
+                            flag_tile(base_c + 2, base_r + 2);
+                        break;
+                    }
+
+                    return true;
+                }
+            }
+            
+        }
+    }
+
+    // found none, try easy next
+    return false;
 }
 
 bool GameWindow::try_medium_rule(){
