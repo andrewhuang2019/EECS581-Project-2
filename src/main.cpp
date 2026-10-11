@@ -24,8 +24,8 @@ int main(int argc, char* argv[]){
       return true;
     }, false);
 
-    start_window_ptr->m_input_handler.on_start_game = [start_window_ptr, game_window_ptr](int num_bombs) {
-      game_window_ptr->start_game(num_bombs);
+    start_window_ptr->m_input_handler.on_start_game = [start_window_ptr, game_window_ptr](int num_bombs, AIDifficulty difficulty) {
+      game_window_ptr->start_game(num_bombs, difficulty);
       game_window_ptr->present();
       start_window_ptr->hide();
     };
