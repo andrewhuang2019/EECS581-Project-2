@@ -50,6 +50,11 @@ StartWindow::StartWindow() {
   m_bomb_scale.set_value_pos(Gtk::PositionType::TOP); // Place numeric value above slider
   m_main_box.append(m_bomb_scale);
 
+  //Set game mode dropdown
+  m_mode_dropdown.set_selected(static_cast<guint>(AIDifficulty::Traditional));
+  m_main_box.append(m_mode_label);
+  m_main_box.append(m_mode_dropdown);
+
   //Set button
   m_start_button.set_label("Start");
   m_start_button.signal_clicked().connect(sigc::mem_fun(*this, &StartWindow::on_start_button_clicked));
@@ -61,13 +66,14 @@ StartWindow::~StartWindow(){}
 void StartWindow::on_start_button_clicked() {
   if (m_input_handler.on_start_game) {
     m_audio.play_start();
-    m_input_handler.on_start_game(static_cast<int>(m_bomb_scale.get_value()));
+    const auto difficulty = static_cast<AIDifficulty>(m_mode_dropdown.get_selected());
+    m_input_handler.on_start_game(static_cast<int>(m_bomb_scale.get_value()), difficulty);
   }
 }
 
 GameWindow::GameWindow() {
   m_main_box.append(m_game_info);
-  m_input_handler.on_start_game = [this](int num_bombs) { start_game(num_bombs); };
+  m_input_handler.on_start_game = [this](int num_bombs, AIDifficulty difficulty) { start_game(num_bombs, difficulty); };
   m_input_handler.on_retry = [this]() { reset_game(); };
   m_input_handler.on_reveal_tile = [this](int row, int col) { return reveal_tile(row, col); };
   m_input_handler.on_flag_tile = [this](int row, int col) { return flag_tile(row, col); };
@@ -132,8 +138,9 @@ GameWindow::GameWindow() {
 
 GameWindow::~GameWindow(){}
 
-void GameWindow::start_game(int bomb_count) {
+void GameWindow::start_game(int bomb_count, AIDifficulty difficulty) {
   m_bomb_count = bomb_count;
+  m_ai_difficulty = difficulty;
   m_game_state = GameState::NotStarted;
   m_end_box.set_visible(false);
   for (int i = 0; i < TILE_COUNT; ++i) {
@@ -149,7 +156,7 @@ void GameWindow::start_game(int bomb_count) {
 }
 
 void GameWindow::reset_game() {
-  start_game(m_bomb_count);
+  start_game(m_bomb_count, m_ai_difficulty);
 }
 
 void GameWindow::update_button_display(int row, int col) {
@@ -304,6 +311,7 @@ void GameWindow::on_button_clicked(int id){
   } else if (m_game_state == GameState::Lost) {
     show_end_screen(false);
   }
+  if (!changes.empty()) ai_turn();
 }
 
 void GameWindow::on_button_right_clicked(int id){
@@ -313,6 +321,18 @@ void GameWindow::on_button_right_clicked(int id){
     if (change.action == TileAction::Flag || change.action == TileAction::Unflag) {
       update_button_display(change.row, change.col);
     }
+  }
+  if (!changes.empty()) ai_turn();
+}
+
+void GameWindow::ai_turn(){
+  switch (m_ai_difficulty) {
+    //uncomment once ai_easy_turn() is merged into main
+    //case AIDifficulty::Easy:   ai_easy_turn();   break;
+    case AIDifficulty::Medium: ai_medium_turn(); break;
+    //uncomment once ai_hard_turn() is defined
+    //case AIDifficulty::Hard:   ai_hard_turn();   break;
+    default: break; // No AI mode
   }
 }
 

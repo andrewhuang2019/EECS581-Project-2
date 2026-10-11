@@ -30,6 +30,8 @@ class StartWindow : public UIWindow {
     protected:
     //Widgets
     Gtk::Scale m_bomb_scale;
+    Gtk::Label m_mode_label{"Game Mode"};
+    Gtk::DropDown m_mode_dropdown{std::vector<Glib::ustring>{"Traditional (no AI)", "AI: Easy", "AI: Medium", "AI: Hard"}};
     Gtk::Button m_start_button;
 
     AudioManager m_audio;
@@ -45,7 +47,7 @@ class GameWindow : public UIWindow {
 
         //Shows the win/defeat overlay. Called once something detects the game has ended.
         void show_end_screen(bool won);
-        void start_game(int bomb_count);
+        void start_game(int bomb_count, AIDifficulty difficulty);
         void reset_game();
         std::vector<TileChange> reveal_tile(int row, int col);
         std::vector<TileChange> flag_tile(int row, int col);
@@ -72,6 +74,7 @@ class GameWindow : public UIWindow {
     GameState m_game_state = GameState::NotStarted;
     int m_bomb_count = 20;
     int m_flag_count = 0;
+    AIDifficulty m_ai_difficulty = AIDifficulty::Traditional;
 
     AudioManager m_audio;
 
@@ -89,6 +92,9 @@ class GameWindow : public UIWindow {
     bool try_hard_rule();
     void ai_medium_turn();
     void ai_hard_turn();
+
+    //Calls the AI for the selected mode
+    void ai_turn();
 };
 
 #endif // UIMANAGER_H
