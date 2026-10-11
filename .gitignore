@@ -1,3 +1,4 @@
 *.o
 cppsweeper
 .clangd
+.vscode
