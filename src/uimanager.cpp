@@ -284,21 +284,20 @@ std::vector<TileChange> GameWindow::flag_tile(int row, int col) {
 
 void GameWindow::on_button_clicked(int id){
   /* Handler for left button clicks */
-  // auto changes = m_input_handler.handle_tile_click(id, ClickType::LEFT);
-  // for (const auto& change : changes) {
-  //   if (change.action == TileAction::Reveal ||
-  //       change.action == TileAction::RevealCascade ||
-  //       change.action == TileAction::MineHit) {
-  //     update_button_display(change.row, change.col);
-  //   }
-  // }
+  auto changes = m_input_handler.handle_tile_click(id, ClickType::LEFT);
+  for (const auto& change : changes) {
+    if (change.action == TileAction::Reveal ||
+        change.action == TileAction::RevealCascade ||
+        change.action == TileAction::MineHit) {
+      update_button_display(change.row, change.col);
+    }
+  }
 
-  // if (m_game_state == GameState::Won) {
-  //   show_end_screen(true);
-  // } else if (m_game_state == GameState::Lost) {
-  //   show_end_screen(false);
-  // }
-  ai_easy_turn();
+  if (m_game_state == GameState::Won) {
+    show_end_screen(true);
+  } else if (m_game_state == GameState::Lost) {
+    show_end_screen(false);
+  }
 }
 
 void GameWindow::on_button_right_clicked(int id){
@@ -452,7 +451,9 @@ void GameWindow::ai_medium_turn(){
   }
 }
 
+// easy AI turn (clear a random non-flagged, uncleared tile)
 bool GameWindow::try_easy_rule() {
+  // check for game over 
   if (m_game_state == GameState::Won || m_game_state == GameState::Lost) {
     return false;
   }
@@ -469,19 +470,23 @@ bool GameWindow::try_easy_rule() {
   }
   if (candidates.empty()) return false;
 
+  // get a random cadidate tile and reveal it
   const auto [row, col] = candidates[rand() % candidates.size()];
   const auto changes = reveal_tile(row, col);
 
+  // update the display
   for (const auto& change : changes) {
     update_button_display(change.row, change.col);
   }
 
+  // check for game over
   if (m_game_state == GameState::Won || m_game_state == GameState::Lost) {
     show_end_screen(m_game_state == GameState::Won);
   }
   return !changes.empty();
 }
 
+// run the easy AI turn and print error if unable to take turn
 void GameWindow::ai_easy_turn(){
   if (m_game_state == GameState::Won || m_game_state == GameState::Lost){
     return;
