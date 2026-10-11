@@ -1,4 +1,5 @@
 #include "uimanager.hpp"
+#include <iostream>
 #include <cstdint>
 
 using namespace std;
@@ -327,8 +328,7 @@ void GameWindow::on_button_right_clicked(int id){
 
 void GameWindow::ai_turn(){
   switch (m_ai_difficulty) {
-    //uncomment once ai_easy_turn() is merged into main
-    //case AIDifficulty::Easy:   ai_easy_turn();   break;
+    case AIDifficulty::Easy: ai_easy_turn(); break;
     case AIDifficulty::Medium: ai_medium_turn(); break;
     //uncomment once ai_hard_turn() is defined
     //case AIDifficulty::Hard:   ai_hard_turn();   break;
@@ -607,7 +607,53 @@ void GameWindow::ai_medium_turn(){
 
   //if a medium rule was not performed by the AI
   if (!try_medium_rule()){
-    // IMPLEMENT: call the easy AI function
-    //ai_easy_turn();
+    ai_easy_turn();
+  }
+}
+
+// easy AI turn (clear a random non-flagged, uncleared tile)
+bool GameWindow::try_easy_rule() {
+  // check for game over 
+  if (m_game_state == GameState::Won || m_game_state == GameState::Lost) {
+    return false;
+  }
+
+  // collect covered (not flagged) tiles
+  std::vector<std::pair<int, int>> candidates;
+  for (int r = 0; r < GRID_SIZE; ++r) {
+    for (int c = 0; c < GRID_SIZE; ++c) {
+      if (m_game_state == GameState::NotStarted ||
+          m_board.get_state(c, r) == Tile::TileState::Covered) {
+        candidates.push_back({r, c});
+      }
+    }
+  }
+  if (candidates.empty()) return false;
+
+  // get a random cadidate tile and reveal it
+  const auto [row, col] = candidates[rand() % candidates.size()];
+  const auto changes = reveal_tile(row, col);
+
+  // update the display
+  for (const auto& change : changes) {
+    update_button_display(change.row, change.col);
+  }
+
+  // check for game over
+  if (m_game_state == GameState::Won || m_game_state == GameState::Lost) {
+    show_end_screen(m_game_state == GameState::Won);
+  }
+  return !changes.empty();
+}
+
+// run the easy AI turn and print error if unable to take turn
+void GameWindow::ai_easy_turn(){
+  if (m_game_state == GameState::Won || m_game_state == GameState::Lost){
+    return;
+  }
+  
+  if (!try_easy_rule()){
+    std::cerr << "FAILED TO TAKE AI EASY TURN\n";  
+    return;
   }
 }
