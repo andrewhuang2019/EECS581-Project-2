@@ -60,6 +60,7 @@ StartWindow::~StartWindow(){}
 
 void StartWindow::on_start_button_clicked() {
   if (m_input_handler.on_start_game) {
+    m_audio.play_start();
     m_input_handler.on_start_game(static_cast<int>(m_bomb_scale.get_value()));
   }
 }
@@ -104,10 +105,12 @@ GameWindow::GameWindow() {
 		auto row_txt = Glib::ustring::compose("%1", i+1);
 		auto col_txt = Glib::ustring::compose("%1", 
 			static_cast<char>('A'+i));
-		Gtk::Label row(row_txt);
-		Gtk::Label col(col_txt);
-    m_button_grid.attach(row, GRID_SIZE, i, 1, 1);
-    m_button_grid.attach(col, i, GRID_SIZE, 1, 1);
+		
+      auto* row = Gtk::make_managed<Gtk::Label>(row_txt);
+      auto* col = Gtk::make_managed<Gtk::Label>(col_txt);
+
+      m_button_grid.attach(*row, GRID_SIZE, i, 1, 1);
+      m_button_grid.attach(*col, i, GRID_SIZE, 1, 1);
   }
 
   m_end_box.set_halign(Gtk::Align::CENTER);
@@ -155,6 +158,7 @@ void GameWindow::update_button_display(int row, int col) {
   auto state = m_board.get_state(col, row);
 
   if (state == Tile::TileState::Flagged) {
+    m_audio.play_flag();
     button.set_label("🚩");
     button.set_sensitive(true);
     return;
@@ -230,6 +234,7 @@ std::vector<TileChange> GameWindow::reveal_tile(int row, int col) {
 
   if (hit_bomb) {
     m_game_state = GameState::Lost;
+    m_audio.play_lose();
   } else {
     bool all_safe_tiles_uncovered = true;
     for (int r = 0; r < GRID_SIZE && all_safe_tiles_uncovered; ++r) {
@@ -244,6 +249,7 @@ std::vector<TileChange> GameWindow::reveal_tile(int row, int col) {
 
     if (all_safe_tiles_uncovered) {
       m_game_state = GameState::Won;
+      m_audio.play_win();
     }
   }
 

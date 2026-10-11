@@ -32,6 +32,8 @@ class StartWindow : public UIWindow {
     Gtk::Scale m_bomb_scale;
     Gtk::Button m_start_button;
 
+    AudioManager m_audio;
+
     //Signal handler
     void on_start_button_clicked();
 };
@@ -66,11 +68,12 @@ class GameWindow : public UIWindow {
     //Board state
     enum class GameState { NotStarted, Playing, Won, Lost };
 
-    AudioManager m_audio;
     Board m_board;
     GameState m_game_state = GameState::NotStarted;
     int m_bomb_count = 20;
     int m_flag_count = 0;
+
+    AudioManager m_audio;
 
     void update_button_display(int row, int col);
     void update_all_displays();
