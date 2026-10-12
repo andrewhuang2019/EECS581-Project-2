@@ -330,8 +330,7 @@ void GameWindow::ai_turn(){
   switch (m_ai_difficulty) {
     case AIDifficulty::Easy: ai_easy_turn(); break;
     case AIDifficulty::Medium: ai_medium_turn(); break;
-    //uncomment once ai_hard_turn() is defined
-    //case AIDifficulty::Hard:   ai_hard_turn();   break;
+    case AIDifficulty::Hard:   ai_hard_turn();   break;
     default: break; // No AI mode
   }
 }
@@ -521,7 +520,8 @@ bool GameWindow::try_medium_rule(){
         continue;
       }
 
-      const int number = m_board.get_tile_value(col, row); //get the tiles value       if (number == 0 || number == 9) {
+      const int number = m_board.get_tile_value(col, row); //get the tiles value
+      if (number == 0 || number == 9) {
         continue;
       }
 
@@ -668,4 +668,23 @@ void GameWindow::ai_easy_turn(){
     std::cerr << "FAILED TO TAKE AI EASY TURN\n";  
     return;
   }
+}
+
+void GameWindow::ai_hard_turn(){
+    if (m_game_state == GameState::Won || m_game_state == GameState::Lost){
+        return;
+    }
+
+    // the correct order is to always try the medium rule,
+    // then the hard rule, 
+    // then the easy rule
+    if (try_medium_rule()){
+        return;
+    }
+
+    if (try_hard_rule()) {
+        return;
+    }
+
+    try_easy_rule();
 }
