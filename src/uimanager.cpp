@@ -408,7 +408,11 @@ bool GameWindow::try_hard_rule(){
     // ...
     // 8 = 8
     // bomb = 9 (natively done already)
-    int custom_tiles[3][3];
+    int custom_tiles[3][3] = {
+        {0, 0, 0},
+        {0, 0, 0},
+        {0, 0, 0}
+    };
 
     // left up right down, representing where the uncovered tiles are
     int matrices[4][3][3] = {
@@ -451,11 +455,11 @@ bool GameWindow::try_hard_rule(){
                 for (size_t c = base_c; c < base_c + 3; c++) {
                     if (m_board.get_state(c, r) == Tile::TileState::Covered ||
                         m_board.get_state(c, r) == Tile::TileState::Flagged) {
-                        custom_tiles[r][c] = 10;
+                        custom_tiles[r - base_r][c - base_c] = 10;
                     }
 
                     if (m_board.get_state(c, r) == Tile::TileState::Uncovered) {
-                        custom_tiles[r][c] = m_board.get_tile_value(c, r);
+                        custom_tiles[r - base_r][c - base_c] = m_board.get_tile_value(c, r);
                     }
                 }
             }
@@ -468,7 +472,7 @@ bool GameWindow::try_hard_rule(){
                 bool matching = true;
                 for (size_t r = 0; r < 3; r++) {
                     for (size_t c = 0; c < 3; c++) {
-                        if (compare[r][c] == -1){
+                        if (compare[r][c] == -1 && m_board.get_state(base_c + c, base_r + r) == Tile::TileState::Uncovered){
                             continue;
                         }
 
@@ -478,39 +482,48 @@ bool GameWindow::try_hard_rule(){
                     }
                 }
 
+                // adapted from medium ai
                 if (matching) {
-                    // uncover middle tile, flag corners
-                    // find tiles based on i value
-                    switch (i) {
-                        case 0: // left
-                            flag_tile(base_c, base_r + 0);
-                            reveal_tile(base_c, base_r + 1);
-                            flag_tile(base_c, base_r + 2);
-                        break;
+                    // {row, col} offsets for [flag, reveal, flag]
+                    int targets[4][3][2] = {
+                        { {0,0}, {1,0}, {2,0} },  // left
+                        { {0,0}, {0,1}, {0,2} },  // up
+                        { {0,2}, {1,2}, {2,2} },  // right
+                        { {2,0}, {2,1}, {2,2} }   // down
+                    };
 
-                        case 1: // up
-                            flag_tile(base_c + 0, base_r);
-                            reveal_tile(base_c + 1, base_r);
-                            flag_tile(base_c + 2, base_r);
-                        break;
+                    bool acted = false;
+                    for (int t = 0; t < 3; t++) {
+                        // static_cast thing taken from online
+                        const int row = static_cast<int>(base_r) + targets[i][t][0];
+                        const int col = static_cast<int>(base_c) + targets[i][t][1];
 
-                        case 2: // right
-                            flag_tile(base_c + 2, base_r + 0);
-                            reveal_tile(base_c + 2, base_r + 1);
-                            flag_tile(base_c + 2, base_r + 2);
-                        break;
+                        // skip tiles already flagged/revealed so we never toggle a flag off
+                        if (m_board.get_state(col, row) != Tile::TileState::Covered) {
+                            continue;
+                        }
 
-                        case 3: // down
-                            flag_tile(base_c + 0, base_r + 2);
-                            reveal_tile(base_c + 1, base_r + 2);
-                            flag_tile(base_c + 2, base_r + 2);
-                        break;
+                        // t == 1 is the safe middle tile, the others are mines
+                        const auto changes = (t == 1) ? reveal_tile(row, col) : flag_tile(row, col);
+                        if (!changes.empty()) acted = true;
+
+                        // push the changes
+                        for (const auto& change : changes) {
+                            update_button_display(change.row, change.col);
+                        }
+
+                        if (m_game_state == GameState::Won || m_game_state == GameState::Lost) {
+                            show_end_screen(m_game_state == GameState::Won);
+                            return acted;
+                        }
                     }
 
-                    return true;
+                    // only report success if something actually changed
+                    if (acted) {
+                        return true;
+                    }
                 }
             }
-            
         }
     }
 
