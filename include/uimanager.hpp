@@ -71,7 +71,7 @@ class GameWindow : public UIWindow {
     enum class GameState { NotStarted, Playing, Won, Lost };
 
     Board m_board;
-    GameState https://github.com/andrewhuang2019/EECS581-Project-2/pull/2/conflict?name=include%252Fuimanager.hpp&ancestor_oid=6d1315ba2dbc30dcaf8ccd5add5f3219694710a6&base_oid=437cf9b160f73743c6f654ab2fc6285dbfb8b942&head_oid=560e4a25f7564b2144f4e391e604c059c7499100m_game_state = GameState::NotStarted;
+    GameState m_game_state = GameState::NotStarted;
     int m_bomb_count = 20;
     int m_flag_count = 0;
     AIDifficulty m_ai_difficulty = AIDifficulty::Traditional;

@@ -21,6 +21,13 @@ Oct 11th, 2026
 
 - 1 hour
 ### Cooper Wright:
+- Estimation: 3 hours
+
+Sept 28th, 2026: 
+- 30 minutes
+
+Oct 11th, 2026
+- 3 hours
 
 
 ### Andrew Huang:
