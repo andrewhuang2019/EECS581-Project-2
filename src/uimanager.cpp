@@ -154,6 +154,16 @@ void GameWindow::start_game(int bomb_count, AIDifficulty difficulty) {
   m_board = Board{};
   auto txt = Glib::ustring::compose("Flags Placed: %1 | (Bombs/Flags) left: %2", m_flag_count, m_bomb_count - m_flag_count);
 	m_game_info.set_text(txt);
+
+  //AI only modes: AI takes a turn every 300ms until the game ends
+  m_ai_timer.disconnect();
+  if (m_ai_difficulty >= AIDifficulty::EasyAuto) {
+    m_ai_timer = Glib::signal_timeout().connect([this]() {
+      if (!get_visible()) return true; //wait until the game window is shown
+      ai_turn();
+      return m_game_state == GameState::NotStarted || m_game_state == GameState::Playing;
+    }, 300);
+  }
 }
 
 void GameWindow::reset_game() {
@@ -328,9 +338,12 @@ void GameWindow::on_button_right_clicked(int id){
 
 void GameWindow::ai_turn(){
   switch (m_ai_difficulty) {
-    case AIDifficulty::Easy: ai_easy_turn(); break;
-    case AIDifficulty::Medium: ai_medium_turn(); break;
-    case AIDifficulty::Hard:   ai_hard_turn();   break;
+    case AIDifficulty::Easy:
+    case AIDifficulty::EasyAuto: ai_easy_turn(); break;
+    case AIDifficulty::Medium:
+    case AIDifficulty::MediumAuto: ai_medium_turn(); break;
+    case AIDifficulty::Hard:
+    case AIDifficulty::HardAuto: ai_hard_turn(); break;
     default: break; // No AI mode
   }
 }

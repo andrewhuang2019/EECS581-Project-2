@@ -31,7 +31,7 @@ class StartWindow : public UIWindow {
     //Widgets
     Gtk::Scale m_bomb_scale;
     Gtk::Label m_mode_label{"Game Mode"};
-    Gtk::DropDown m_mode_dropdown{std::vector<Glib::ustring>{"Traditional (no AI)", "AI: Easy", "AI: Medium", "AI: Hard"}};
+    Gtk::DropDown m_mode_dropdown{std::vector<Glib::ustring>{"Traditional (no AI)", "AI: Easy", "AI: Medium", "AI: Hard", "AI Only: Easy", "AI Only: Medium", "AI Only: Hard"}};
     Gtk::Button m_start_button;
 
     AudioManager m_audio;
@@ -75,6 +75,7 @@ class GameWindow : public UIWindow {
     int m_bomb_count = 20;
     int m_flag_count = 0;
     AIDifficulty m_ai_difficulty = AIDifficulty::Traditional;
+    sigc::connection m_ai_timer; //repeats AI turns in AI only modes
 
     AudioManager m_audio;
 

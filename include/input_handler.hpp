@@ -16,7 +16,11 @@ enum class AIDifficulty {
     Traditional,
     Easy,
     Medium,
-    Hard
+    Hard,
+    // AI plays the whole game by itself
+    EasyAuto,
+    MediumAuto,
+    HardAuto
 };
 
 // Describes one tile change returned after an input event.
