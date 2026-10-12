@@ -1,4 +1,6 @@
 #include "uimanager.hpp"
+#include <iostream>
+#include <cstdint>
 
 using namespace std;
 
@@ -49,6 +51,11 @@ StartWindow::StartWindow() {
   m_bomb_scale.set_value_pos(Gtk::PositionType::TOP); // Place numeric value above slider
   m_main_box.append(m_bomb_scale);
 
+  //Set game mode dropdown
+  m_mode_dropdown.set_selected(static_cast<guint>(AIDifficulty::Traditional));
+  m_main_box.append(m_mode_label);
+  m_main_box.append(m_mode_dropdown);
+
   //Set button
   m_start_button.set_label("Start");
   m_start_button.signal_clicked().connect(sigc::mem_fun(*this, &StartWindow::on_start_button_clicked));
@@ -59,13 +66,15 @@ StartWindow::~StartWindow(){}
 
 void StartWindow::on_start_button_clicked() {
   if (m_input_handler.on_start_game) {
-    m_input_handler.on_start_game(static_cast<int>(m_bomb_scale.get_value()));
+    m_audio.play_start();
+    const auto difficulty = static_cast<AIDifficulty>(m_mode_dropdown.get_selected());
+    m_input_handler.on_start_game(static_cast<int>(m_bomb_scale.get_value()), difficulty);
   }
 }
 
 GameWindow::GameWindow() {
   m_main_box.append(m_game_info);
-  m_input_handler.on_start_game = [this](int num_bombs) { start_game(num_bombs); };
+  m_input_handler.on_start_game = [this](int num_bombs, AIDifficulty difficulty) { start_game(num_bombs, difficulty); };
   m_input_handler.on_retry = [this]() { reset_game(); };
   m_input_handler.on_reveal_tile = [this](int row, int col) { return reveal_tile(row, col); };
   m_input_handler.on_flag_tile = [this](int row, int col) { return flag_tile(row, col); };
@@ -103,10 +112,12 @@ GameWindow::GameWindow() {
 		auto row_txt = Glib::ustring::compose("%1", i+1);
 		auto col_txt = Glib::ustring::compose("%1", 
 			static_cast<char>('A'+i));
-		Gtk::Label row(row_txt);
-		Gtk::Label col(col_txt);
-    m_button_grid.attach(row, GRID_SIZE, i, 1, 1);
-    m_button_grid.attach(col, i, GRID_SIZE, 1, 1);
+		
+      auto* row = Gtk::make_managed<Gtk::Label>(row_txt);
+      auto* col = Gtk::make_managed<Gtk::Label>(col_txt);
+
+      m_button_grid.attach(*row, GRID_SIZE, i, 1, 1);
+      m_button_grid.attach(*col, i, GRID_SIZE, 1, 1);
   }
 
   m_end_box.set_halign(Gtk::Align::CENTER);
@@ -128,8 +139,9 @@ GameWindow::GameWindow() {
 
 GameWindow::~GameWindow(){}
 
-void GameWindow::start_game(int bomb_count) {
+void GameWindow::start_game(int bomb_count, AIDifficulty difficulty) {
   m_bomb_count = bomb_count;
+  m_ai_difficulty = difficulty;
   m_game_state = GameState::NotStarted;
   m_end_box.set_visible(false);
   for (int i = 0; i < TILE_COUNT; ++i) {
@@ -145,7 +157,7 @@ void GameWindow::start_game(int bomb_count) {
 }
 
 void GameWindow::reset_game() {
-  start_game(m_bomb_count);
+  start_game(m_bomb_count, m_ai_difficulty);
 }
 
 void GameWindow::update_button_display(int row, int col) {
@@ -154,6 +166,7 @@ void GameWindow::update_button_display(int row, int col) {
   auto state = m_board.get_state(col, row);
 
   if (state == Tile::TileState::Flagged) {
+    m_audio.play_flag();
     button.set_label("🚩");
     button.set_sensitive(true);
     return;
@@ -229,6 +242,7 @@ std::vector<TileChange> GameWindow::reveal_tile(int row, int col) {
 
   if (hit_bomb) {
     m_game_state = GameState::Lost;
+    m_audio.play_lose();
   } else {
     bool all_safe_tiles_uncovered = true;
     for (int r = 0; r < GRID_SIZE && all_safe_tiles_uncovered; ++r) {
@@ -243,6 +257,7 @@ std::vector<TileChange> GameWindow::reveal_tile(int row, int col) {
 
     if (all_safe_tiles_uncovered) {
       m_game_state = GameState::Won;
+      m_audio.play_win();
     }
   }
 
@@ -297,6 +312,7 @@ void GameWindow::on_button_clicked(int id){
   } else if (m_game_state == GameState::Lost) {
     show_end_screen(false);
   }
+  if (!changes.empty()) ai_turn();
 }
 
 void GameWindow::on_button_right_clicked(int id){
@@ -306,6 +322,17 @@ void GameWindow::on_button_right_clicked(int id){
     if (change.action == TileAction::Flag || change.action == TileAction::Unflag) {
       update_button_display(change.row, change.col);
     }
+  }
+  if (!changes.empty()) ai_turn();
+}
+
+void GameWindow::ai_turn(){
+  switch (m_ai_difficulty) {
+    case AIDifficulty::Easy: ai_easy_turn(); break;
+    case AIDifficulty::Medium: ai_medium_turn(); break;
+    //uncomment once ai_hard_turn() is defined
+    //case AIDifficulty::Hard:   ai_hard_turn();   break;
+    default: break; // No AI mode
   }
 }
 
@@ -345,35 +372,173 @@ void GameWindow::on_quit_clicked(){
   }
 }
 
+
+/*
+ * hard rule application, just look for 1-2-1 patterns only and solve those
+ * this will not do anything if they are already solved, or there is none on the board
+ * a valid 1-2-1 state is as follows:
+ * (C -> convered, R -> revealed)
+ * C 1 R
+ * C 2 R
+ * C 1 R
+ * plus any rotation of this
+ *
+ * this is also meant to be ran after the medium rule has no more steps available
+*/
+bool GameWindow::try_hard_rule(){
+    if (m_game_state != GameState::Playing) {
+        return false;
+    }
+
+    // easy way to show what the tiles are
+    // C = 10,
+    // 1 = 1
+    // ...
+    // 8 = 8
+    // bomb = 9 (natively done already)
+    int custom_tiles[3][3];
+
+    // left up right down, representing where the uncovered tiles are
+    int matrices[4][3][3] = {
+        // left
+        {
+            {10, 1, -1},
+            {10, 2, -1},
+            {10, 1, -1}
+        },
+
+        // up
+        {
+            {10, 10, 10},
+            {1, 2, 1},
+            {-1, -1, -1}
+        },
+
+        // right
+        {
+            {-1, 1, 10},
+            {-1, 2, 10},
+            {-1, 1, 10}
+        },
+
+        // down
+        {
+            {-1, -1, -1},
+            {1, 2, 1},
+            {10, 10, 10}
+        }
+    };
+
+
+    // iterate through all 3x3 spaces on the board
+    for (size_t base_r = 0; base_r < GRID_SIZE - 2; base_r++) {
+        for (size_t base_c = 0; base_c < GRID_SIZE - 2; base_c++) {
+
+            // save information to custom_tiles
+            for (size_t r = base_r; r < base_r + 3; r++) {
+                for (size_t c = base_c; c < base_c + 3; c++) {
+                    if (m_board.get_state(c, r) == Tile::TileState::Covered ||
+                        m_board.get_state(c, r) == Tile::TileState::Flagged) {
+                        custom_tiles[r][c] = 10;
+                    }
+
+                    if (m_board.get_state(c, r) == Tile::TileState::Uncovered) {
+                        custom_tiles[r][c] = m_board.get_tile_value(c, r);
+                    }
+                }
+            }
+
+            // compare the custom tiles to left right up and down to see what to reveal/flag
+            for (size_t i = 0; i < 4; i++) {
+                // get matrix to check against from matrices
+                int (&compare)[3][3] = matrices[i];
+
+                bool matching = true;
+                for (size_t r = 0; r < 3; r++) {
+                    for (size_t c = 0; c < 3; c++) {
+                        if (compare[r][c] == -1){
+                            continue;
+                        }
+
+                        if (compare[r][c] != custom_tiles[r][c]) {
+                            matching = false;
+                        }
+                    }
+                }
+
+                if (matching) {
+                    // uncover middle tile, flag corners
+                    // find tiles based on i value
+                    switch (i) {
+                        case 0: // left
+                            flag_tile(base_c, base_r + 0);
+                            reveal_tile(base_c, base_r + 1);
+                            flag_tile(base_c, base_r + 2);
+                        break;
+
+                        case 1: // up
+                            flag_tile(base_c + 0, base_r);
+                            reveal_tile(base_c + 1, base_r);
+                            flag_tile(base_c + 2, base_r);
+                        break;
+
+                        case 2: // right
+                            flag_tile(base_c + 2, base_r + 0);
+                            reveal_tile(base_c + 2, base_r + 1);
+                            flag_tile(base_c + 2, base_r + 2);
+                        break;
+
+                        case 3: // down
+                            flag_tile(base_c + 0, base_r + 2);
+                            reveal_tile(base_c + 1, base_r + 2);
+                            flag_tile(base_c + 2, base_r + 2);
+                        break;
+                    }
+
+                    return true;
+                }
+            }
+            
+        }
+    }
+
+    // found none, try easy next
+    return false;
+}
+
+//Authored By: Peter Barybin and Emily Farley
+//Date Created: 10/05/2026
+//Checks the two medium AI rules and returns whether a medium rule can be applied 
 bool GameWindow::try_medium_rule(){
   if (m_game_state != GameState::Playing){
     return false;
   }
 
+  //iterate through the board game tiles 
   for (int row=0; row < GRID_SIZE; row++){
     for (int col=0; col < GRID_SIZE; col++){
-      if (m_board.get_state(col, row) != Tile::Uncovered){
+      if (m_board.get_state(col, row) != Tile::Uncovered){ 
         continue;
       }
 
-      const int number = m_board.get_tile_value(col, row);
-      if (number == 0 || number == 9) {
+      const int number = m_board.get_tile_value(col, row); //get the tiles value       if (number == 0 || number == 9) {
         continue;
       }
 
       int flagged_count = 0;
       std::vector<std::pair<int, int>> hidden_neighbors;
 
+      //check neighbors of the selected tile 
       for (int i=-1; i <= 1; i++){
         for (int j=-1; j <= 1; j++){
-          if (i == 0 && j == 0){
+          if (i == 0 && j == 0){ //selected tile cannot be its own neighbor 
             continue;
           }
 
           const int neighbor_row = row + i;
           const int neighbor_col = col + j;
 
-          if (neighbor_row < 0 || neighbor_row >= GRID_SIZE || neighbor_col < 0 || neighbor_col >= GRID_SIZE){
+          if (neighbor_row < 0 || neighbor_row >= GRID_SIZE || neighbor_col < 0 || neighbor_col >= GRID_SIZE){ //ensure that the neighbors are within grid bounds
             continue;
           }
 
@@ -399,12 +564,14 @@ bool GameWindow::try_medium_rule(){
       //rule 2 - number of flagged neighbors of a revealed cell equals that cell’s number (all hidden neighbors are safe)
       const bool should_reveal = flagged_count == number;
 
+      //neither rule is satisfied 
       if (!should_flag && !should_reveal){
         continue;
       }
 
       bool acted = false;
 
+      //iterate through hidden neighbors 
       for (const auto& neighbor : hidden_neighbors){
         const int neighbor_row = neighbor.first;
         const int neighbor_col = neighbor.second;
@@ -416,14 +583,17 @@ bool GameWindow::try_medium_rule(){
         //flag or reveal according to rule
         const auto changes = should_flag ? flag_tile(neighbor_row, neighbor_col) : reveal_tile(neighbor_row, neighbor_col);
 
+        //if rule applied then set acted to true
         if (!changes.empty()){
           acted = true;
         }
 
+        //apply each state to the GUI
         for (const auto& change : changes){
           update_button_display(change.row, change.col);
         }
 
+        //if game has been won or lost show corresponding end screen 
         if (m_game_state == GameState::Won || m_game_state == GameState::Lost){
           show_end_screen(m_game_state == GameState::Won);
           return acted;
@@ -439,14 +609,63 @@ bool GameWindow::try_medium_rule(){
   return false; //returns if neither rule is able to be applied
 }
 
+//Authored By: Peter Barybin and Emily Farley
+//Date Created: 10/05/2026
+//Executes one turn of medium AI rules
 void GameWindow::ai_medium_turn(){
   if (m_game_state == GameState::Won || m_game_state == GameState::Lost){
     return;
   }
 
-  //if a medium rule was not performed by the AI
+  //if a medium rule was not performed by the AI fallback to an easy AI turn
   if (!try_medium_rule()){
-    // IMPLEMENT: call the easy AI function
-    //ai_easy_turn();
+    ai_easy_turn();
+  }
+}
+
+// easy AI turn (clear a random non-flagged, uncleared tile)
+bool GameWindow::try_easy_rule() {
+  // check for game over 
+  if (m_game_state == GameState::Won || m_game_state == GameState::Lost) {
+    return false;
+  }
+
+  // collect covered (not flagged) tiles
+  std::vector<std::pair<int, int>> candidates;
+  for (int r = 0; r < GRID_SIZE; ++r) {
+    for (int c = 0; c < GRID_SIZE; ++c) {
+      if (m_game_state == GameState::NotStarted ||
+          m_board.get_state(c, r) == Tile::TileState::Covered) {
+        candidates.push_back({r, c});
+      }
+    }
+  }
+  if (candidates.empty()) return false;
+
+  // get a random cadidate tile and reveal it
+  const auto [row, col] = candidates[rand() % candidates.size()];
+  const auto changes = reveal_tile(row, col);
+
+  // update the display
+  for (const auto& change : changes) {
+    update_button_display(change.row, change.col);
+  }
+
+  // check for game over
+  if (m_game_state == GameState::Won || m_game_state == GameState::Lost) {
+    show_end_screen(m_game_state == GameState::Won);
+  }
+  return !changes.empty();
+}
+
+// run the easy AI turn and print error if unable to take turn
+void GameWindow::ai_easy_turn(){
+  if (m_game_state == GameState::Won || m_game_state == GameState::Lost){
+    return;
+  }
+  
+  if (!try_easy_rule()){
+    std::cerr << "FAILED TO TAKE AI EASY TURN\n";  
+    return;
   }
 }
