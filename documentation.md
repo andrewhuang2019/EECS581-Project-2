@@ -51,5 +51,8 @@ Oct 11th, 2026
 - 4 hours
 
 ### Sina Asheghalishahi:
-- Estimation: 6 hours
-- Actual: 7 hours
+- Estimation: 3 hours
+
+Oct 11th, 2026
+
+- 3 hours
