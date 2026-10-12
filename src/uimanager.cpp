@@ -506,35 +506,39 @@ bool GameWindow::try_hard_rule(){
     return false;
 }
 
+//Authored By: Peter Barybin and Emily Farley
+//Date Created: 10/05/2026
+//Checks the two medium AI rules and returns whether a medium rule can be applied 
 bool GameWindow::try_medium_rule(){
   if (m_game_state != GameState::Playing){
     return false;
   }
 
+  //iterate through the board game tiles 
   for (int row=0; row < GRID_SIZE; row++){
     for (int col=0; col < GRID_SIZE; col++){
-      if (m_board.get_state(col, row) != Tile::Uncovered){
+      if (m_board.get_state(col, row) != Tile::Uncovered){ 
         continue;
       }
 
-      const int number = m_board.get_tile_value(col, row);
-      if (number == 0 || number == 9) {
+      const int number = m_board.get_tile_value(col, row); //get the tiles value       if (number == 0 || number == 9) {
         continue;
       }
 
       int flagged_count = 0;
       std::vector<std::pair<int, int>> hidden_neighbors;
 
+      //check neighbors of the selected tile 
       for (int i=-1; i <= 1; i++){
         for (int j=-1; j <= 1; j++){
-          if (i == 0 && j == 0){
+          if (i == 0 && j == 0){ //selected tile cannot be its own neighbor 
             continue;
           }
 
           const int neighbor_row = row + i;
           const int neighbor_col = col + j;
 
-          if (neighbor_row < 0 || neighbor_row >= GRID_SIZE || neighbor_col < 0 || neighbor_col >= GRID_SIZE){
+          if (neighbor_row < 0 || neighbor_row >= GRID_SIZE || neighbor_col < 0 || neighbor_col >= GRID_SIZE){ //ensure that the neighbors are within grid bounds
             continue;
           }
 
@@ -560,12 +564,14 @@ bool GameWindow::try_medium_rule(){
       //rule 2 - number of flagged neighbors of a revealed cell equals that cell’s number (all hidden neighbors are safe)
       const bool should_reveal = flagged_count == number;
 
+      //neither rule is satisfied 
       if (!should_flag && !should_reveal){
         continue;
       }
 
       bool acted = false;
 
+      //iterate through hidden neighbors 
       for (const auto& neighbor : hidden_neighbors){
         const int neighbor_row = neighbor.first;
         const int neighbor_col = neighbor.second;
@@ -577,14 +583,17 @@ bool GameWindow::try_medium_rule(){
         //flag or reveal according to rule
         const auto changes = should_flag ? flag_tile(neighbor_row, neighbor_col) : reveal_tile(neighbor_row, neighbor_col);
 
+        //if rule applied then set acted to true
         if (!changes.empty()){
           acted = true;
         }
 
+        //apply each state to the GUI
         for (const auto& change : changes){
           update_button_display(change.row, change.col);
         }
 
+        //if game has been won or lost show corresponding end screen 
         if (m_game_state == GameState::Won || m_game_state == GameState::Lost){
           show_end_screen(m_game_state == GameState::Won);
           return acted;
@@ -600,12 +609,15 @@ bool GameWindow::try_medium_rule(){
   return false; //returns if neither rule is able to be applied
 }
 
+//Authored By: Peter Barybin and Emily Farley
+//Date Created: 10/05/2026
+//Executes one turn of medium AI rules
 void GameWindow::ai_medium_turn(){
   if (m_game_state == GameState::Won || m_game_state == GameState::Lost){
     return;
   }
 
-  //if a medium rule was not performed by the AI
+  //if a medium rule was not performed by the AI fallback to an easy AI turn
   if (!try_medium_rule()){
     ai_easy_turn();
   }
