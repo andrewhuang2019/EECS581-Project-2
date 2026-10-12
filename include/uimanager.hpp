@@ -30,7 +30,11 @@ class StartWindow : public UIWindow {
     protected:
     //Widgets
     Gtk::Scale m_bomb_scale;
+    Gtk::Label m_mode_label{"Game Mode"};
+    Gtk::DropDown m_mode_dropdown{std::vector<Glib::ustring>{"Traditional (no AI)", "AI: Easy", "AI: Medium", "AI: Hard"}};
     Gtk::Button m_start_button;
+
+    AudioManager m_audio;
 
     //Signal handler
     void on_start_button_clicked();
@@ -43,7 +47,7 @@ class GameWindow : public UIWindow {
 
         //Shows the win/defeat overlay. Called once something detects the game has ended.
         void show_end_screen(bool won);
-        void start_game(int bomb_count);
+        void start_game(int bomb_count, AIDifficulty difficulty);
         void reset_game();
         std::vector<TileChange> reveal_tile(int row, int col);
         std::vector<TileChange> flag_tile(int row, int col);
@@ -66,11 +70,13 @@ class GameWindow : public UIWindow {
     //Board state
     enum class GameState { NotStarted, Playing, Won, Lost };
 
-    AudioManager m_audio;
     Board m_board;
-    GameState m_game_state = GameState::NotStarted;
+    GameState https://github.com/andrewhuang2019/EECS581-Project-2/pull/2/conflict?name=include%252Fuimanager.hpp&ancestor_oid=6d1315ba2dbc30dcaf8ccd5add5f3219694710a6&base_oid=437cf9b160f73743c6f654ab2fc6285dbfb8b942&head_oid=560e4a25f7564b2144f4e391e604c059c7499100m_game_state = GameState::NotStarted;
     int m_bomb_count = 20;
     int m_flag_count = 0;
+    AIDifficulty m_ai_difficulty = AIDifficulty::Traditional;
+
+    AudioManager m_audio;
 
     void update_button_display(int row, int col);
     void update_all_displays();
@@ -80,10 +86,21 @@ class GameWindow : public UIWindow {
     void on_button_right_clicked(int id);
     void on_play_again_clicked();
     void on_quit_clicked();
-
+  
+    //AI rules easy
+    bool try_easy_rule();
+    void ai_easy_turn();
+  
     //AI rules medium
     bool try_medium_rule();
     void ai_medium_turn();
+
+    //AI rules hard
+    bool try_hard_rule();
+    void ai_hard_turn();
+
+    //Calls the AI for the selected mode
+    void ai_turn();
 };
 
 #endif // UIMANAGER_H

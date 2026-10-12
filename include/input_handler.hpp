@@ -11,6 +11,14 @@ enum class ClickType {
     RIGHT
 };
 
+// Game mode picked on the start screen. Traditional is player-only (no AI).
+enum class AIDifficulty {
+    Traditional,
+    Easy,
+    Medium,
+    Hard
+};
+
 // Describes one tile change returned after an input event.
 enum class TileAction {
     Reveal,
@@ -41,7 +49,7 @@ class InputHandler {
         // caused by the move, lifecycle callbacks perform window actions
         std::function<std::vector<TileChange>(int row, int col)> on_reveal_tile;
         std::function<std::vector<TileChange>(int row, int col)> on_flag_tile;
-        std::function<void(int num_bombs)> on_start_game;
+        std::function<void(int num_bombs, AIDifficulty difficulty)> on_start_game;
         std::function<void()> on_retry;
         std::function<void()> on_close;
 
